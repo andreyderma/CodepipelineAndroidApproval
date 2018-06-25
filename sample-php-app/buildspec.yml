@@ -1,0 +1,32 @@
+version: 0.2
+#Build spec using docker hub
+
+env:
+  variables:
+    IMAGE_REPO_NAME: "YOUR_DOCKERHUB_REPO"
+    IMAGE_TAG_LATEST: "latest"
+    DOCKER_USER: "YOUR_DOCKERHUB_USER"
+    DOCKER_PASSWORD: "YOUR_DOCKERHUB_PASSWORD"
+
+phases:
+  pre_build:
+    commands:
+      - echo Starting...
+      - docker login -u="$DOCKER_USER" -p="$DOCKER_PASSWORD"
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+  build:
+    commands:
+      - echo Build started
+      - echo image tag $(echo $IMAGE_TAG)...
+      - echo Building the Docker image...
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG_LATEST .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG_LATEST $DOCKER_USER/$IMAGE_REPO_NAME:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push $DOCKER_USER/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - echo Pushing the Docker image $(echo $IMAGE_TAG)...
+      - printf '[{"name":"phpdocker-container","imageUri":"%s"}]' $DOCKER_USER/$IMAGE_REPO_NAME:$IMAGE_TAG > imagedefinitions.json
+artifacts:
+  files: imagedefinitions.json
